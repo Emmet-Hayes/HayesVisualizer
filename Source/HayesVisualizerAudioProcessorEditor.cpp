@@ -1,6 +1,7 @@
 #include "HayesVisualizerAudioProcessor.h"
 #include "HayesVisualizerAudioProcessorEditor.h"
 
+
 HayesVisualizerAudioProcessorEditor::HayesVisualizerAudioProcessorEditor (HayesVisualizerAudioProcessor& p)
 :   BaseAudioProcessorEditor (p)
 ,   processor (p)
@@ -8,6 +9,10 @@ HayesVisualizerAudioProcessorEditor::HayesVisualizerAudioProcessorEditor (HayesV
     setLookAndFeel(&customLookAndFeel);
     openGLComponent = std::make_unique<OpenGLComponent>();
     addAndMakeVisible(openGLComponent.get());
+    
+    errorComponent.setText("A version of OpenGL capable of rendering the visualizer shaders was not found. Sorry!", 
+                           juce::dontSendNotification);
+    addAndMakeVisible(&errorComponent); // displays error message on failed openGL load
     
     const auto ratio = static_cast<double> (defaultWidth) / defaultHeight;
     setResizable(false, true);
@@ -28,12 +33,19 @@ void HayesVisualizerAudioProcessorEditor::paint (juce::Graphics& g)
 
 void HayesVisualizerAudioProcessorEditor::resized()
 {
-    openGLComponent->setBounds(getLocalBounds());
 }
 
 void HayesVisualizerAudioProcessorEditor::timerCallback()
 {
     openGLComponent->synthNoteColor = 4186.f;
     openGLComponent->audioAmplitude = 0.5f;
+    
+    isOpenGLAvailable = juce::OpenGLShaderProgram::getLanguageVersion() >= 4.2;
+    if (isOpenGLAvailable && tryInitializeOpenGL == 0)
+        openGLComponent->setBounds(getLocalBounds());
+    else
+        errorComponent.setBounds(0, getHeight() / 3, getWidth(), getHeight() / 3);
+        
+    tryInitializeOpenGL++; // don't try to init more than once
     repaint();
 }
